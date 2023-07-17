@@ -362,8 +362,21 @@ Lemma hoare_conseq : forall t H Q H' Q',
   H ==> H' ->
   Q' ===> Q ->
   hoare t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  unfold hoare. intros.
+  assert (H' s). {
+    apply H1. auto.
+  }
+  apply H0 in H4. inversion H4. inversion H5.
+  exists x. exists x0.
+  split. 
+  {
+   apply H6.
+  }
+  {
+   apply H2. apply H6. 
+  }
+Qed.
 (** [] *)
 
 (** The frame rule asserts that if one can derive a specification of
@@ -601,8 +614,39 @@ Proof using. introv M. hnf in M. eauto. Qed.
 
 Lemma hstar_hpure_l : forall P H h,
   (\[P] \* H) h = (P /\ H h).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply propositional_extensionality. split.
+  {
+   intros. split.
+   {
+    hnf in H0. inversion H0. inversion H1. apply H2.
+   }
+   {
+    hnf in H0. inversion H0. inversion H1. 
+    assert (x = Fmap.empty). apply H2. subst.
+    subst. assert (h = x0). { rewrite <- Fmap.union_empty_l. apply H2. }
+    subst. apply H2.
+   }  
+  }
+  {
+   intros. hnf. exists (Fmap.empty : heap). exists h.
+   split.
+   {
+    hnf. split. auto. apply H0.
+   }
+   split.
+   {
+    apply H0.
+   }
+   split.
+   {
+    auto.
+   }
+   {
+    rewrite Fmap.union_empty_l. auto.
+   } 
+  }
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -642,8 +686,45 @@ Definition triple_lowlevel (t:trm) (H:hprop) (Q:val->hprop) : Prop :=
 
 Lemma triple_iff_triple_lowlevel : forall t H Q,
   triple t H Q <-> triple_lowlevel t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  unfold triple. unfold triple_lowlevel. unfold hoare. intros. split.
+  {
+    intros. 
+    remember (fun r => r = h2) as H'.
+    remember (h1 \u h2) as s0.
+    assert ((H \* H') s0). {
+      subst. apply hstar_intro. auto. auto. auto.
+    }
+    apply H0 in H3. inversion H3. inversion H4. 
+    rename x into s1. rename x0 into v1.
+    assert ((Q v1 \* H') s1). {
+      apply H5.
+    }
+    apply hstar_inv in H6. inversion H6. inversion H7.
+    rename x into h1'. rename x0 into h2'.
+    assert (h2' = h2). {
+       rewrite HeqH' in H8. apply H8.
+    }
+    subst.
+    exists h1'. exists v1.
+    split. apply H8. split. assert (s1 = h1' \u h2). { apply H8. }
+    rewrite <- H9. apply H5. apply H8.
+  }
+  {
+    intros. apply hstar_inv in H1. inversion H1. inversion H2. rename x into h1. rename x0 into h2.
+    assert (Fmap.disjoint h1 h2). { apply H3. } apply H0 in H4. inversion H4.
+    rename x into h1'. inversion H5. rename x into v1.
+    exists (h1' \u h2). exists v1.
+    split.
+    {
+     assert (s = h1 \u h2). { apply H3. } rewrite H7. apply H6. 
+    }
+    {
+     apply hstar_intro. apply H6.  apply H3. apply H6. 
+    }
+    apply H3.
+  }
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -779,8 +860,13 @@ Axiom functional_extensionality : forall A B (f g:A->B),
 Lemma predicate_extensionality_derived : forall A (P Q:A->Prop),
   (forall x, P x <-> Q x) ->
   P = Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  apply functional_extensionality.
+  intros.
+  apply propositional_extensionality.
+  apply H.
+Qed.
 (** [] *)
 
 End Extensionality.
