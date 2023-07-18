@@ -90,7 +90,16 @@ Lemma himpl_antisym : forall H1 H2,
   (H1 ==> H2) ->
   (H2 ==> H1) ->
   H1 = H2.
-Proof using. (* FILL IN HERE *) Admitted.
+Proof using. (* FILL IN HERE *)
+  intros.
+  apply predicate_extensionality. intros. split.
+  {
+   intros. apply H. auto. 
+  }
+  {
+   intros. apply H0. auto. 
+  }
+Qed.
 
 (** [] *)
 
@@ -196,8 +205,13 @@ Parameter himpl_frame_l : forall H2 H1 H1',
 
 Lemma hstar_comm_assoc : forall H1 H2 H3,
   H1 \* H2 \* H3 = H2 \* H1 \* H3.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  rewrite <- hstar_assoc.
+  rewrite (hstar_comm H1 H2).
+  rewrite -> hstar_assoc.
+  auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, especially useful (himpl_frame_r)
@@ -207,8 +221,13 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_frame_r : forall H1 H2 H2',
   H2 ==> H2' ->
   (H1 \* H2) ==> (H1 \* H2').
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros.
+  rewrite hstar_comm.
+  rewrite (hstar_comm H1 H2').
+  apply himpl_frame_l.
+  auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, especially useful (himpl_frame_lr)
@@ -222,8 +241,16 @@ Lemma himpl_frame_lr : forall H1 H1' H2 H2',
   H1 ==> H1' ->
   H2 ==> H2' ->
   (H1 \* H2) ==> (H1' \* H2').
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  assert (H1 \* H2 ==> H1' \* H2). {
+    apply himpl_frame_l. auto.
+  }
+  assert (H1' \* H2 ==> H1' \* H2'). {
+    apply himpl_frame_r. auto.
+  }
+  apply (himpl_trans H3 H4).
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -246,8 +273,10 @@ Lemma himpl_hstar_hpure_r : forall P H H',
   P ->
   (H ==> H') ->
   H ==> (\[P] \* H').
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. rewrite hstar_hpure_l. split.
+  auto. apply H1. auto.
+Qed.
 (** [] *)
 
 (** Reciprocally, consider an entailment of the form [(\[P] \* H) ==> H'].
@@ -265,8 +294,10 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_hstar_hpure_l : forall (P:Prop) (H H':hprop),
   (P -> H ==> H') ->
   (\[P] \* H) ==> H'.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. rewrite hstar_hpure_l in H1. destruct H1.
+  apply H0 in H1. apply H1. auto.
+Qed.
 (** [] *)
 
 (** Consider an entailment of the form [H ==> (\exists x, J x)], where [x]
@@ -280,8 +311,9 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_hexists_r : forall A (x:A) H J,
   (H ==> J x) ->
   H ==> (\exists x, J x).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. exists x. apply H0. auto.
+Qed.
 (** [] *)
 
 (** Reciprocally, consider an entailment [(\exists x, (J x)) ==> H].
@@ -307,8 +339,10 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_hexists_l : forall (A:Type) (H:hprop) (J:A->hprop),
   (forall x, J x ==> H) ->
   (\exists x, J x) ==> H.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  destruct H1. apply H0 in H1. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -394,8 +428,14 @@ Lemma triple_conseq_frame : forall H2 H1 Q1 t H Q,
 
     Prove the combined consequence-frame rule. *)
 
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros.
+  assert (triple t (H1 \* H2) (Q1 \*+ H2)). {
+    apply triple_frame. auto.
+  }
+  apply (triple_conseq H5).
+  auto. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -442,53 +482,68 @@ Implicit Types n m : int.
 Parameter case_study_1 : forall p q,
       p ~~> 3 \* q ~~> 4
   ==> q ~~> 4 \* p ~~> 3.
+(* True √ *)
 
 Parameter case_study_2 : forall p q,
       p ~~> 3
   ==> q ~~> 4 \* p ~~> 3.
+(* False √ *)
 
 Parameter case_study_3 : forall p q,
       q ~~> 4 \* p ~~> 3
   ==> p ~~> 4.
+(* False √ *)
 
 Parameter case_study_4 : forall p q,
       q ~~> 4 \* p ~~> 3
   ==> p ~~> 3.
+(* True *)  (* Wrong! *)
+(* Remark: (p ~~> 3) : hprop indicates that the heap has only one cell! *)
+(*          while (q ~~> 4) \* (p ~~> 3) indicates that the heap has two cells!*)
 
 Parameter case_study_5 : forall p q,
       \[False] \* p ~~> 3
   ==> p ~~> 4 \* q ~~> 4.
+(* True √ *)
 
 Parameter case_study_6 : forall p q,
       p ~~> 3 \* q ~~> 4
   ==> \[False].
+(* False √ *)
 
 Parameter case_study_7 : forall p,
       p ~~> 3 \* p ~~> 4
   ==> \[False].
+(* True √ *)
 
 Parameter case_study_8 : forall p,
       p ~~> 3 \* p ~~> 3
   ==> \[False].
+(* True √ *)
 
 Parameter case_study_9 : forall p,
       p ~~> 3
   ==> \exists n, p ~~> n.
+(* True √ *)
 
 Parameter case_study_10 : forall p,
       exists n, p ~~> n
   ==> p ~~> 3.
+(* False √ *)
 
 Parameter case_study_11 : forall p,
       \exists n, p ~~> n \* \[n > 0]
   ==> \exists n, \[n > 1] \* p ~~> (n-1).
+(* True √ *)
 
 Parameter case_study_12 : forall p q,
       p ~~> 3 \* q ~~> 3
   ==> \exists n, p ~~> n \* q ~~> n.
+(* False √ *)
 
 Parameter case_study_13 : forall p n,
   p ~~> n \* \[n > 0] \* \[n < 0] ==> p ~~> n \* p ~~> n.
+(* True √ *)
 
 End CaseStudy.
 
@@ -597,8 +652,19 @@ Implicit Types n : int.
 Lemma himpl_example_1 : forall p1 p2 p3 p4,
       p1 ~~> 6 \* p2 ~~> 7 \* p3 ~~> 8 \* p4 ~~> 9
   ==> p4 ~~> 9 \* p3 ~~> 8 \* p2 ~~> 7 \* p1 ~~> 6.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  rewrite hstar_comm.
+  rewrite <- hstar_assoc.
+  rewrite <- hstar_assoc.
+  rewrite <- hstar_assoc.
+  apply himpl_frame_l.
+  rewrite hstar_assoc.
+  rewrite hstar_comm.
+  apply himpl_frame_l.
+  rewrite hstar_comm.
+  auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (himpl_example_2)
@@ -608,11 +674,46 @@ Proof using. (* FILL IN HERE *) Admitted.
     appear at the head of the left-hand side of the entailment.
     For arithmetic inequalities, use the [math] tactic. *)
 
+Lemma hstar_false_l : forall H,
+  \[False] \* H = \[False].
+Proof.
+  intros.
+  apply predicate_extensionality. intros. split.
+  {
+   intros. destruct H0. destruct H0. destruct H0. destruct H0. false. 
+  }
+  {
+   intros. destruct H0. false. 
+  }
+Qed.
+
+Lemma hstar_false_r : forall H,
+  H \* \[False] = \[False].
+Proof.
+  intros. rewrite hstar_comm. apply hstar_false_l.
+Qed.
+
 Lemma himpl_example_2 : forall p1 p2 p3 n,
       p1 ~~> 6 \* \[n > 0] \* p2 ~~> 7 \* \[n < 0]
   ==> p3 ~~> 8.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  rewrite hstar_comm.
+  rewrite (hstar_comm (\[n > 0]) (p2 ~~> 7 \* \[n < 0])).
+  rewrite (hstar_assoc (p2 ~~> 7) (\[n < 0]) (\[n > 0])).
+  assert (\[n < 0] \* \[n > 0] = \[False]). {
+    apply predicate_extensionality. intros. split.
+    {
+     intros. rewrite hstar_hpure_l in H. destruct H.
+     destruct H0. false. math.
+    }
+    {
+     intros. destruct H. false. 
+    }
+  }
+  rewrite H. rewrite hstar_false_r. rewrite hstar_false_l.
+  hnf. intros. destruct H0. false. 
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (himpl_example_3)
@@ -625,8 +726,22 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_example_3 : forall p,
       \exists n, p ~~> n \* \[n > 0]
   ==> \exists n, \[n > 1] \* p ~~> (n-1).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. destruct H.
+  rewrite hstar_comm in H.
+  destruct H. destruct H. destruct H. destruct H0. destruct H1.
+  exists (x + 1). subst. apply hstar_intro.
+  {
+   destruct H0. destruct H.
+   split. math. auto. 
+  }
+  {
+   assert (x + 1 - 1 = x). math. rewrite H2. auto.
+  }
+  {
+   auto. 
+  }
+Qed.
 (** [] *)
 
 End EntailmentProofs.
@@ -907,8 +1022,11 @@ Lemma xchange_lemma : forall H1 H1' H H' H2,
   H ==> H1 \* H2 ->
   H1' \* H2 ==> H' ->
   H ==> H'.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. xchange H3. 
+  assert (H1 \* H2 ==> H1' \* H2). { xsimpl. auto. }
+  xchange H5. auto.
+Qed.
 (** [] *)
 
 End XsimplTactic.
@@ -938,8 +1056,11 @@ Module FundamentalProofs.
 Lemma himpl_frame_l : forall H2 H1 H1',
   H1 ==> H1' ->
   (H1 \* H2) ==> (H1' \* H2).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  destruct H0. destruct H0. destruct H0. destruct H3. destruct H4.
+  subst. apply hstar_intro. apply H. auto. auto. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, especially useful (himpl_frame_r)
@@ -949,8 +1070,10 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma himpl_frame_r : forall H1 H2 H2',
   H2 ==> H2' ->
   (H1 \* H2) ==> (H1 \* H2').
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. rewrite hstar_comm. rewrite (hstar_comm H1 H2').
+  apply himpl_frame_l. auto.
+Qed.
 (** [] *)
 
 (** The second simplest result is the extrusion property for existentials.
@@ -1026,8 +1149,17 @@ Qed.
 
 Lemma hstar_hempty_l : forall H,
   \[] \* H = H.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply predicate_extensionality. intros. split.
+  {
+   intros. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
+   inversion H0. subst. rewrite Fmap.union_empty_l. auto.
+  }
+  {
+   intros. hnf. exists (Fmap.empty : heap). exists x. split. reflexivity.
+   split. auto. split. auto. rewrite Fmap.union_empty_l. auto.
+  }
+Qed.
 (** [] *)
 
 (** The lemma showing that [hempty] is a right neutral can be derived
@@ -1072,8 +1204,21 @@ Proof using.
     { exists* h2 h3. }
     { rewrite* @Fmap.disjoint_union_eq_r. }
     { rewrite* @Fmap.union_assoc in U. } }
-(* FILL IN HERE *) Admitted.
-
+  (* FILL IN HERE *)
+  { 
+   hnf. intros. destruct H. destruct H. destruct H. destruct H0. destruct H4.
+   destruct H0. destruct H0. destruct H0. destruct H6. destruct H7.
+   subst. rewrite <- Fmap.union_assoc. apply hstar_intro.
+   {
+    apply hstar_intro. auto. auto. rewrite Fmap.disjoint_union_eq_r in H4. apply H4.
+   }
+   { auto. }
+   {
+    rewrite Fmap.disjoint_union_eq_l. split.
+    rewrite Fmap.disjoint_union_eq_r in H4. rewrite Fmap.disjoint_comm. apply H4. auto.
+   } 
+  }
+Qed.
 (** [] *)
 
 End FundamentalProofs.
@@ -1116,8 +1261,18 @@ Lemma triple_conseq : forall t H Q H' Q',
   H ==> H' ->
   Q' ===> Q ->
   triple t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros. unfold triple. intros. 
+  unfold triple in H0.
+  assert (hoare t (H' \* H'0) (Q' \*+ H'0)). { apply H0. }
+  apply (hoare_conseq H3).
+  {
+   apply himpl_frame_l. auto. 
+  }
+  {
+   hnf. intros. apply himpl_frame_l. auto.
+  }
+Qed.
 (** [] *)
 
 End ProveConsequenceRules.
@@ -1167,7 +1322,13 @@ Qed.
 Lemma triple_hexists : forall t (A:Type) (J:A->hprop) Q,
   (forall x, triple t (J x) Q) ->
   triple t (\exists x, J x) Q.
-Proof using. (* FILL IN HERE *) Admitted.
+Proof using. (* FILL IN HERE *)
+  intros. unfold triple.  intros. unfold triple in H. 
+  unfold hoare in H. unfold hoare. intros. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1.
+  destruct H2. subst. assert ((J x1 \* H') (x \u x0)). { apply hstar_intro. auto. auto. auto. }
+  apply H in H3. destruct H3. destruct H3. destruct H3.
+  exists x2. exists x3. subst. auto. 
+Qed.  
 
 (** [] *)
 
@@ -1223,8 +1384,16 @@ End ProveExtractionRules.
 
 Lemma hexists_named_eq : forall H,
   H = (\exists h, \[H h] \* (= h)).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply predicate_extensionality. intros. split.
+  {
+   intros. exists x. rewrite hstar_hpure_l. auto. 
+  }
+  {
+    intros. destruct H0. apply hstar_inv in H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
+    subst. destruct H0. subst. rewrite Fmap.union_empty_l. auto.
+  }
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (hoare_named_heap)
@@ -1237,8 +1406,11 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma hoare_named_heap : forall t H Q,
   (forall h, H h -> hoare t (= h) Q) ->
   hoare t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros. unfold hoare. intros.
+  apply H0 in H1. unfold hoare in H1. assert(s = s). { auto. } apply H1 in H2.
+  destruct H2. destruct H2. destruct H2. exists x. exists x0. auto. 
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (triple_named_heap)
@@ -1253,8 +1425,13 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma triple_named_heap : forall t H Q,
   (forall h, H h -> triple t (= h) Q) ->
   triple t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold triple. unfold triple in H0. intros.
+  unfold hoare. intros. apply hstar_inv in H1. destruct H1. destruct H1. destruct H1. destruct H2. destruct H3.
+  subst. assert (forall H', hoare t ((= x) \* H') (Q \*+ H')). { apply H0. auto. }
+  unfold hoare in H4. assert (((= x) \* H') (x \u x0)). { apply hstar_intro. auto. auto. auto. }
+  apply H4 in H5. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
