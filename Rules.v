@@ -457,8 +457,12 @@ Parameter triple_hexists : forall t (A:Type) (J:A->hprop) Q,
 Lemma triple_hpure' : forall t (P:Prop) Q,
   (P -> triple t \[] Q) ->
   triple t \[P] Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. assert (\[P] \* \[] = \[P]). {
+    apply hstar_hempty_r.
+  }
+  rewrite <- H0. apply triple_hpure. auto.
+Qed. 
 (** [] *)
 
 (* ================================================================= *)
@@ -588,8 +592,9 @@ Parameter triple_val : forall v H Q,
 
 Lemma triple_val_minimal : forall v,
   triple (trm_val v) \[] (fun r => \[r = v]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply triple_val. xsimpl. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, especially useful (triple_val')
@@ -601,8 +606,9 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma triple_val' : forall v H Q,
   H ==> Q v ->
   triple (trm_val v) H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply triple_val. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard, especially useful (triple_let_val)
@@ -619,7 +625,28 @@ Proof using. (* FILL IN HERE *) Admitted.
     with the let-binding rule, and exploit the appropriate structural rules. *)
 
 (* FILL IN HERE *)
-
+Lemma triple_let_val : forall x v1 t2 H Q Q1,
+  triple v1 H Q1 ->
+  triple (subst x v1 t2) (Q1 v1) Q ->
+  triple (trm_let x v1 t2) H Q.
+Proof.
+  intros. unfold triple. intros. unfold hoare. intros.
+  unfold triple in H0. unfold hoare in H0. unfold triple in H1. unfold hoare in H1.
+  apply H0 in H2. destruct H2. destruct H2. destruct H2. rename x0 into h1. rename x1 into v2.
+  assert (v1 = v2). {
+    destruct v1; inversion H2; subst; auto.
+  }
+  subst. apply H1 in H3. destruct H3. destruct H3. destruct H3. rename x0 into h1'.
+  assert (h = h1). {
+    destruct v2; inversion H2; subst; auto.
+  }
+  subst.
+  exists h1'. exists x1. split.
+  {
+    eapply eval_let. apply H2. apply H3. 
+  }
+  auto.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -901,7 +928,6 @@ Definition succ_using_incr : val :=
        'x }>.
 
 (** Recall the specification of [succ_using_incr]. *)
-
 Lemma triple_succ_using_incr : forall (n:int),
   triple (trm_app succ_using_incr n)
     \[]
@@ -915,8 +941,20 @@ Lemma triple_succ_using_incr : forall (n:int),
     Hint: use [applys triple_val] for reasoning about the final
     return value, namely [x]. *)
 
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. applys triple_app_fun. { reflexivity. } simpl.
+  applys triple_let. { applys triple_ref. }
+  intros. simpl. apply triple_hexists. intros. apply triple_hpure. intros. subst. 
+  applys triple_seq.
+  { apply triple_incr. }
+  applys triple_let.
+  { apply triple_get.  }
+  intros. simpl.
+  apply triple_hpure. intros. subst.
+  applys triple_seq.
+  { apply triple_free. }
+  applys triple_val. xsimpl. math.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -953,13 +991,31 @@ Definition factorec : val :=
     the tactic [rew_bool_eq in *] to simplify, e.g., the expression
     [isTrue (m <= 1)) = true]. *)
 
+Print triple_app_fix.
 Lemma triple_factorec : forall n,
   n >= 0 ->
   triple (factorec n)
     \[]
     (fun r => \[r = facto n]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intro n. 
+  induction_wf IH: (downto 0) n. intros.
+  applys triple_app_fix. { reflexivity. } simpl. 
+  applys triple_let. apply triple_le. intros. simpl. apply triple_hpure'. intros. subst.
+  applys triple_if. case_if.
+  {
+   apply triple_val. xsimpl. rewrite facto_init. math. math. 
+  }
+  {
+   applys triple_let. apply triple_sub. intros. simpl. apply triple_hpure'. intros. subst.
+   applys triple_let. applys IH. math. math. intros. simpl. apply triple_hpure'. intros. subst.
+   assert (facto n = n * (facto (n - 1))). {
+    apply facto_step. math.
+   }
+   rewrite H0.
+   apply triple_mul.
+  }
+Qed.
 (** [] *)
 
 End ExamplePrograms.
@@ -1022,8 +1078,9 @@ Lemma triple_div_from_triple_div' : forall n1 n2,
   triple (val_div n1 n2)
     \[]
     (fun r => \[r = val_int (Z.quot n1 n2)]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. applys triple_conseq. apply triple_div'. xsimpl. auto. xsimpl. auto.
+Qed.
 (** [] *)
 
 (** As we said, placing pure preconditions outside of the triples
@@ -1069,8 +1126,23 @@ Lemma triple_let_frame : forall x t1 t2 Q1 H H1 H2 Q,
 
     Prove the let-frame rule. *)
 
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  apply triple_let with (Q1 := (fun r => Q1 r \* H2)).
+  {
+    unfold triple. intros. 
+    assert (H \* H' ==> (H1 \* H2) \* H'). {
+      apply himpl_frame_l. auto.
+    }
+    unfold hoare. intros.
+    apply H5 in H6.
+    unfold triple in H0. unfold hoare in H0.
+    rewrite hstar_assoc in H6.
+    apply H0 in H6. destruct H6. destruct H6. destruct H6.
+    exists x0. exists x1. split. auto. rewrite hstar_assoc. auto.
+  }
+  auto.
+Qed.
 (** [] *)
 
 End LetFrame.
@@ -1634,8 +1706,12 @@ Lemma hoare_app_fun : forall v1 v2 x t1 H Q,
   v1 = val_fun x t1 ->
   hoare (subst x v2 t1) H Q ->
   hoare (trm_app v1 v2) H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros. subst. unfold hoare. intros. unfold hoare in H1.
+  apply H1 in H0. destruct H0. destruct H0. destruct H0.
+  exists x0. exists x1. split.
+  applys eval_app_fun. reflexivity. auto. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (triple_app_fun)
@@ -1646,8 +1722,11 @@ Lemma triple_app_fun : forall x v1 v2 t1 H Q,
   v1 = val_fun x t1 ->
   triple (subst x v2 t1) H Q ->
   triple (trm_app v1 v2) H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold triple. intros. unfold triple in H1.
+  applys hoare_app_fun. rewrite H0. reflexivity.
+  apply H1.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -1682,8 +1761,11 @@ Lemma hoare_free : forall H p v,
   hoare (val_free (val_loc p))
     ((p ~~> v) \* H)
     (fun _ =>  H).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold hoare. intros. apply hstar_inv in H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
+  exists x0. exists val_unit. split. rewrite H0 in H3.
+  applys eval_free_sep. apply H3. rewrite H0 in H2. auto. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (triple_free)
@@ -1696,8 +1778,11 @@ Lemma triple_free : forall p v,
   triple (val_free (val_loc p))
     (p ~~> v)
     (fun _ => \[]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros. unfold triple. intros.
+  assert (\[] \* H' = H'). { apply hstar_hempty_l. }
+  rewrite H. apply hoare_free.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -1749,12 +1834,25 @@ Qed.
       [hsingle_intro], [hsingle_inv], [hstar_intro], and [hstar_inv],
       rather than unfolding the definitions of [hstar] and [hsingle]. *)
 
+(* Remark: This exercise is extremely easy, which deserves 2~3 stars I think. *)
 Lemma hoare_set : forall H v p v',
   hoare (val_set (val_loc p) v)
     ((p ~~> v') \* H)
     (fun _ => (p ~~> v) \* H).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold hoare. intros.
+  apply hstar_inv in H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
+  exists ((Fmap.single p v) \u x0). exists val_unit. split.
+  {
+   applys eval_set_sep. rewrite H0 in H3. apply H3.
+   auto. 
+   Print Fmap.disjoint_single_set. applys Fmap.disjoint_single_set. rewrite H0 in H2. apply H2. 
+  }
+  {
+   apply hstar_intro. reflexivity. auto. 
+   applys Fmap.disjoint_single_set. rewrite H0 in H2. apply H2. 
+  }
+Qed.
 (** [] *)
 
 (** We then derive the Separation Logic triple as usual. *)
@@ -1788,8 +1886,19 @@ Lemma triple_of_hoare : forall t H Q,
   (forall H', exists Q', hoare t (H \* H') Q'
                      /\  Q' ===> Q \*+ H') ->
   triple t H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold triple. intros.
+  unfold hoare. intros. unfold hoare in H0.
+  assert (exists Q',  (forall h, (H \* H') h -> exists h' v, eval h t h' v /\ Q' v h') /\ Q' ===> Q \*+ H'). {
+    apply H0.
+  }
+  destruct H2. destruct H2.
+  assert (exists h' v, eval h t h' v /\ x v h'). { apply H2. auto. }
+  destruct H4. destruct H4. destruct H4.
+  rename x into Q'.
+  exists x0. exists x1. split. auto.
+  apply H3. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (triple_add')
@@ -1801,8 +1910,17 @@ Lemma triple_add' : forall n1 n2,
   triple (val_add n1 n2)
     \[]
     (fun r => \[r = val_int (n1 + n2)]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros.
+  applys triple_of_hoare. intros.
+  exists (fun r => \[r = n1 + n2] \* H'). split.
+  assert (H' = \[] \* H'). {
+    rewrite hstar_hempty_l. auto.
+  }
+  rewrite <- H.
+  apply hoare_add.
+  auto.
+Qed.
 (** [] *)
 
 End ProofsFactorization.
@@ -1931,8 +2049,16 @@ Qed.
 Lemma triple_trm_seq_assoc : forall t1 t2 t3 H Q,
   triple (trm_seq (trm_seq t1 t2) t3) H Q ->
   triple (trm_seq t1 (trm_seq t2 t3)) H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  applys triple_eval_like.
+  assert (eval_like <{ (t1; t2); t3}> <{ t1; t2; t3 }>). {
+    unfold eval_like. intros.  inversion H1. subst.
+    inversion H5. subst. applys eval_seq. apply H6.
+    applys eval_seq. apply H10. apply H8.
+  }
+  apply H1. auto.
+Qed.
 (** [] *)
 
 (** Such a change in the parenthesis structure of a sequence can be helfpul
