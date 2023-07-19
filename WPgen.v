@@ -1204,12 +1204,63 @@ Qed.
     Complete the proof of the idempotence of [mkstruct].
     Hint: leverage [xpull] and [xsimpl]. *)
 
+    (* Remark: Hint denied. *)
 Lemma mkstruct_idempotent : forall F,
   mkstruct (mkstruct F) = mkstruct F.
 Proof using.
   intros. apply fun_ext_1. intros Q. applys himpl_antisym.
-  (* FILL IN HERE *) Admitted.
-
+  (* FILL IN HERE *) 
+  {
+   hnf. intros. unfold mkstruct. unfold mkstruct in H.
+   destruct H. destruct H. destruct H. destruct H. destruct H. destruct H. destruct H. destruct H.
+   destruct H. destruct H. destruct H1. destruct H2. destruct H1. destruct H1. destruct H1. destruct H4.
+   destruct H5. destruct H4. destruct H0. destruct H0. destruct H0. destruct H0. destruct H8. destruct H9. destruct H8.
+   subst. destruct H7. subst. exists x3.  exists (x4 \* x0).
+   rewrite Fmap.union_assoc.
+   applys hstar_intro. auto.
+   {
+    rewrite hstar_assoc.
+    applys hstar_intro.
+    {
+      assert (x4 = x4 \* \[]). { rewrite hstar_hempty_r. auto. }
+      rewrite H6. apply hstar_intro. auto. auto. auto.
+    }
+    applys hstar_intro.
+    auto. 
+    split.
+    {
+      hnf. intros. 
+      assert ((x3 v \* x4) \* x0 ==> x v \* x0). {
+        apply himpl_frame_l. auto.
+      }
+      rewrite <- hstar_assoc.
+      applys himpl_trans. apply H6. apply x12.
+    }
+    auto.
+    auto.
+    auto.
+   }
+   auto.
+  }
+  {
+   hnf. intros. unfold mkstruct. unfold mkstruct in H.
+   destruct H. destruct H. destruct H. destruct H. destruct H. destruct H0. 
+   destruct H1. destruct H0. destruct H0. destruct H0. destruct H3. destruct H4.
+   destruct H3. subst.
+   exists x. exists x0. 
+   applys hstar_intro. 
+   {
+      exists x. exists \[].
+      rewrite <- hstar_assoc.
+      rewrite hstar_hpure_r. split.
+      rewrite hstar_hempty_r. auto.
+      hnf. intros. rewrite hstar_hempty_r. auto.
+   }
+   rewrite hstar_hpure_r. split.
+   assert (x0 = x0 \* \[]). { rewrite hstar_hempty_r. auto. }
+   rewrite H2. apply hstar_intro. auto. auto. auto. auto. auto.
+  }
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -1389,8 +1440,22 @@ Lemma triple_succ_using_incr_with_xlemmas : forall (n:int),
   triple (trm_app succ_using_incr n)
     \[]
     (fun v => \[v = n+1]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  unfold succ_using_incr.
+  applys triple_app_fun. { reflexivity. } simpl. 
+  applys triple_let. apply triple_ref. intros. simpl.
+  applys triple_hexists. intros.
+  applys triple_hpure. intros. subst.
+  applys triple_seq.
+  {
+   apply triple_incr.
+  }
+  applys triple_let. apply triple_get. intros. simpl. 
+  applys triple_hpure. intros. subst.
+  applys triple_seq. apply triple_free.
+  applys triple_val. xsimpl. math.
+Qed.
 (** [] *)
 
 End ProofsWithXlemmas.
@@ -1473,8 +1538,17 @@ Lemma triple_succ_using_incr_with_xtactics : forall (n:int),
   triple (trm_app succ_using_incr n)
     \[]
     (fun v => \[v = n+1]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  xwp. xlet.
+  xapp_nosubst triple_ref. intros.
+  xseq. subst.  
+  xapp_nosubst triple_incr. 
+  xlet.
+  xapp_nosubst triple_get. intros. subst.
+  xseq.
+  xapp_nosubst triple_free.
+  xval. xsimpl. math.
+Qed.
 (** [] *)
 
 End ProofsWithXtactics.
@@ -1579,8 +1653,20 @@ Lemma triple_succ_using_incr_with_xapps : forall (n:int),
   triple (trm_app succ_using_incr n)
     \[]
     (fun v => \[v = n+1]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. 
+  xwp.
+  xlet.
+  xapp. intros.
+  xseq.
+  xapp. 
+  xlet.
+  xapp.
+  xseq.
+  xapp.
+  xval.
+  xsimpl.
+  math.
+Qed.
 (** [] *)
 
 (** In summary, thanks to [wpgen] and its associated x-tactics,
@@ -1611,8 +1697,13 @@ Lemma xconseq_lemma : forall Q1 Q2 H F,
   H ==> mkstruct F Q1 ->
   Q1 ===> Q2 ->
   H ==> mkstruct F Q2.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  applys himpl_trans.
+  apply H0. 
+  apply mkstruct_conseq.
+  auto.
+Qed.
 (** [] *)
 
 Tactic Notation "xconseq" :=
@@ -1637,8 +1728,22 @@ Lemma xframe_lemma : forall H1 H2 H Q Q1 F,
   H1 ==> mkstruct F Q1 ->
   Q1 \*+ H2 ===> Q ->
   H ==> mkstruct F Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  applys xconseq_lemma.
+  {
+   assert (H ==> mkstruct F (Q1 \*+ H2)). {
+    applys himpl_trans. apply H0.
+    assert (H1 \* H2 ==> mkstruct F Q1 \* H2). {
+      applys himpl_frame_l. auto.
+    }
+    applys himpl_trans. apply H5.
+    apply mkstruct_frame. 
+   }
+   apply H5. 
+  }
+  auto.
+Qed.
 (** [] *)
 
 Tactic Notation "xframe" constr(H) :=
