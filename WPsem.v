@@ -290,8 +290,20 @@ Lemma triple_seq_from_wp_seq : forall t1 t2 H Q H1,
   triple t1 H (fun v => H1) ->
   triple t2 H1 Q ->
   triple (trm_seq t1 t2) H Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *)
+  intros. 
+  applys wp_equiv.
+  apply wp_equiv in H2.
+  apply wp_equiv in H0.
+  assert (wp t1 (fun _ => H1) ==> wp t1 (fun _ => wp t2 Q)). {
+    apply wp_conseq. hnf. auto.
+  }
+  assert (H ==> wp t1 (fun _ => wp t2 Q)). {
+    applys himpl_trans. apply H0. apply H3.
+  }
+  applys himpl_trans.
+  apply H4. apply wp_seq.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -450,8 +462,31 @@ Definition wp (t:trm) (Q:val->hprop) : hprop :=
 
 Lemma wp_equiv : forall t H Q,
   (H ==> wp t Q) <-> (triple t H Q).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. split.
+  {
+   intros. unfold wp in H0. 
+   unfold triple. unfold hoare. intros.
+   apply hstar_inv in H1. destruct H1. destruct H1. destruct H1. destruct H2. destruct H3.
+   apply H0 in H1. destruct H1.
+   apply hstar_inv in H1. destruct H1. destruct H1. destruct H1. destruct H5. destruct H6.
+   rename x1 into H'1. destruct H5. subst.
+   unfold triple in x1. unfold hoare in x1.
+   assert ((H'1 \* H') ((x2 \u x3) \u x0)). {
+    apply hstar_intro.
+    assert (H'1 = H'1 \* \[]). { rewrite hstar_hempty_r. auto. }
+    rewrite H4. apply hstar_intro. auto.
+    auto. auto. auto. 
+    apply H3.
+   }
+   apply x1 in H4.  destruct H4. destruct H4. destruct H4.
+   exists x. exists x4. auto. 
+  }
+  {
+   intros. hnf. intros. unfold wp. exists H.
+   rewrite hstar_hpure_r. auto.
+  }
+Qed.
 (** [] *)
 
 End WpHighLevel.
@@ -528,8 +563,32 @@ Definition wp (t:trm) (Q:val->hprop) : hprop :=
 
 Lemma wp_equiv_wp_low : forall t H Q,
   (H ==> wp t Q) <-> (triple t H Q).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. split.
+  {
+   intros. unfold wp in H0. unfold triple. intros. unfold hoare. intros.
+   apply hstar_inv in H1. destruct H1. destruct H1.
+   destruct H1. destruct H2. destruct H3. subst. apply H0 in H1.
+   unfold triple in H1. unfold hoare in H1. 
+   assert (((=x) \* H') (x \u x0)). {
+    apply hstar_intro; auto.
+   }
+   apply H1 in H4.
+   destruct H4. destruct H4. destruct H4.
+   exists x1. exists x2. auto. 
+  }
+  {
+   intros. unfold triple in H0. hnf. intros.
+   unfold hoare in H0. unfold wp. unfold triple. unfold hoare. intros.
+   apply hstar_inv in H2. destruct* H2. destruct H2. destruct H2. destruct H3. destruct H4.
+   subst. 
+   assert ((H \* H') (h \u x0)). {
+    apply hstar_intro; auto.
+   }
+   apply H0 in H2. destruct H2. destruct H2. destruct H2.
+   exists x. exists x1. auto. 
+  }
+Qed.
 (** [] *)
 
 End WpLowLevel.
@@ -554,8 +613,10 @@ Lemma triple_hexists_in_wp : forall t Q A (J:A->hprop),
   (forall x, (J x ==> wp t Q)) ->
   (\exists x, J x) ==> wp t Q.
 
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. destruct H0.
+  apply H in H0. auto.
+Qed.
 (** [] *)
 
 (** In other words, in the [wp] presentation, we do not need
@@ -586,8 +647,14 @@ Lemma wp_conseq_frame_trans : forall t H H1 H2 Q1 Q,
   H ==> H1 \* H2 ->
   Q1 \*+ H2 ===> Q ->
   H ==> wp t Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.
+  assert (H1 \* H2 ==> wp t (Q1 \*+ H2)). {
+    apply wp_frame_trans. auto.
+  } 
+  applys wp_conseq_trans. apply H5.
+  auto. auto.
+Qed.
 (** [] *)
 
 (** The combined structural rule for [wp] can actually be stated in a more
@@ -605,8 +672,11 @@ Proof using. (* FILL IN HERE *) Admitted.
 Lemma wp_conseq_frame : forall t H Q1 Q2,
   Q1 \*+ H ===> Q2 ->
   (wp t Q1) \* H ==> (wp t Q2).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  apply wp_conseq_frame_trans with (H1 := wp t Q1) (Q1 := Q1) (H2 := H).
+  auto. auto. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -630,8 +700,10 @@ Parameter wp_if : forall b t1 t2 Q,
 
 Lemma wp_if' : forall b t1 t2 Q,
   (if b then (wp t1 Q) else (wp t2 Q)) ==> wp (trm_if b t1 t2) Q.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  applys wp_if. case_if. auto. auto.
+Qed.
 (** [] *)
 
 End WpIfAlt.
@@ -774,7 +846,20 @@ Qed.
 
 Lemma wp_let : forall x t1 t2 Q,
   wp t1 (fun v => wp (subst x v t2) Q) ==> wp (trm_let x t1 t2) Q.
-Proof using. (* FILL IN HERE *) Admitted.
+Proof using. (* FILL IN HERE *) 
+  intros. unfold wp. xsimpl. intros.
+  applys triple_let. apply H.
+  intros. simpl. 
+  unfold triple. intros. unfold hoare. intros.
+  destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. subst.
+  destruct H0. destruct H0. destruct H0. destruct H0. destruct H3. destruct H4. subst.
+  destruct H3. 
+  assert ((x3 \* H') ((x4 \u x5) \u x2)). {
+    apply hstar_intro. rewrite H3. rewrite Fmap.union_empty_r. auto. auto. auto.
+  }
+  apply x1 in H5. destruct H5. destruct H5. destruct H5.
+  exists x6. exists x7. auto.
+Qed.
 
 (** [] *)
 
