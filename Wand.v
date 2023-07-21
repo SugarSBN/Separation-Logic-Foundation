@@ -169,8 +169,14 @@ Lemma hwand_inv : forall h1 h2 H1 H2,
   H1 h1 ->
   Fmap.disjoint h1 h2 ->
   H2 (h1 \u h2).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros.  unfold hwand in H. destruct H. destruct H.
+  destruct H. destruct H. destruct H4. destruct H5.
+  destruct H4. subst. apply x2. 
+  apply hstar_intro. auto.
+  assert (x = x \* \[]). { rewrite hstar_hempty_r. auto. }
+  rewrite H6. apply hstar_intro. auto. auto. auto. auto. 
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -322,8 +328,18 @@ Proof using. intros. applys wp_conseq_frame. applys qwand_cancel. Qed.
 Lemma wp_conseq_frame_of_wp_ramified : forall t H Q1 Q2,
   Q1 \*+ H ===> Q2 ->
   (wp t Q1) \* H ==> (wp t Q2).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  assert (H ==> Q1 \--* Q2). {
+    apply qwand_equiv. auto.
+  }
+  applys himpl_trans.
+  assert (wp t Q1 \* H ==> wp t Q1 \* (Q1 \--* Q2)). {
+    apply himpl_frame_r. auto.
+  }
+  apply H2.
+  applys wp_ramified.
+Qed.
 (** [] *)
 
 (** The following reformulation of [wp_ramified] can be more practical
@@ -1065,8 +1081,17 @@ Proof using. introv M. applys himpl_hwand_r. xsimpl. applys M. Qed.
 
 Lemma himpl_hwand_hpure_lr : forall (P1 P2:Prop),
   \[P1 -> P2] ==> (\[P1] \-* \[P2]).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  destruct H. 
+  rewrite H. 
+  applys hwand_equiv.
+  assert (\[P1] \* \[] ==> \[P2]). {
+    rewrite hstar_hempty_r. xsimpl. auto.
+  }
+  apply H0.
+  split. 
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -1123,8 +1148,11 @@ Qed.
 
 Lemma himpl_hwand_hstar_same_r : forall H1 H2,
   H1 ==> (H2 \-* (H2 \* H1)).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  applys hwand_equiv.
+  auto. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, especially useful (hwand_cancel_part)
@@ -1133,8 +1161,14 @@ Proof using. (* FILL IN HERE *) Admitted.
 
 Lemma hwand_cancel_part : forall H1 H2 H3,
   H1 \* ((H1 \* H2) \-* H3) ==> (H2 \-* H3).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. applys hwand_equiv. 
+  rewrite <- hstar_assoc.
+  assert (H1 \* H2 \-* H3 = (H2 \* H1) \-* H3). {
+    xsimpl. rewrite hstar_comm. auto. rewrite hstar_comm. auto. 
+  }
+  rewrite H. apply hwand_cancel.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (hwand_frame)
@@ -1144,8 +1178,17 @@ Proof using. (* FILL IN HERE *) Admitted.
 
 Lemma hwand_frame : forall H1 H2 H3,
   H1 \-* H2 ==> (H1 \* H3) \-* (H2 \* H3).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros.
+  applys hwand_equiv.
+  assert ((H1 \* H3) \* (H1 \-* H2) ==> H2 \* H3). {
+    rewrite (hstar_comm H1 H3). rewrite hstar_assoc.
+    xsimpl (H1 \* (H1 \-* H2)). 
+    apply hwand_equiv. auto.
+  }
+  apply H0.
+  auto.
+Qed.
 (** [] *)
 
 End WandProperties.
@@ -1400,8 +1443,19 @@ Qed.
 
 Lemma himpl_qwand_hstar_same_r : forall H Q,
   H ==> Q \--* (Q \*+ H).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. hnf. intros. applys hstar_qwand.
+  assert (\[] \* H ==> ((Q \--* Q) \* H)). {
+    applys himpl_frame_l. hnf. intros.
+    applys qwand_equiv. 
+    assert (Q \*+ \[] ===> Q). { 
+      hnf. intros. rewrite hstar_hempty_r. auto.
+    }
+    apply H2.
+    auto.
+  }
+  apply H1. rewrite hstar_hempty_l. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (qwand_cancel_part)
@@ -1411,8 +1465,18 @@ Proof using. (* FILL IN HERE *) Admitted.
 
 Lemma qwand_cancel_part : forall H Q1 Q2,
   H \* ((Q1 \*+ H) \--* Q2) ==> (Q1 \--* Q2).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  assert ((Q1 \*+ H) \*+ ((Q1 \*+ H) \--* Q2) ===> Q2). {
+    applys qwand_equiv. auto.
+  }
+  assert (Q1 \*+ (H \* (Q1 \*+ H \--* Q2)) ===> Q2). {
+    hnf. intros.
+    rewrite <- hstar_assoc. auto.
+  }
+  remember (H \* (Q1 \*+ H \--* Q2)) as H2.
+  apply qwand_equiv. auto.
+Qed.
 (** [] *)
 
 (** ** Equivalence between Alternative Definitions of the Magic Wand
@@ -1810,7 +1874,16 @@ Parameter triple_incr : forall (p:loc) (n:int),
     and then reasoning about triples, compared to working on the [wp] form. *)
 
 (* FILL IN HERE *)
-
+Lemma wp_incr : forall p (n : int) Q,
+  (p ~~> n) \* ((p ~~> (n + 1)) \-* Q val_unit) ==> wp (incr p) Q.
+Proof.
+    intros.
+    rewrite wp_equiv. 
+    applys triple_conseq_frame.
+    apply triple_incr.
+    apply himpl_refl.
+    intros. xsimpl. intros. subst. auto.
+Qed.
 (** [] *)
 
 End TexanTriples.
@@ -1887,8 +1960,20 @@ Definition hor (H1 H2 : hprop) : hprop :=
 
 Lemma hor_eq_hor' :
   hor = hor'.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  apply fun_ext_1. intros H1.
+  apply fun_ext_1. intros H2.
+  unfold hor. unfold hor'.
+  applys pred_ext_1. intros h.
+  split.
+  {
+   intros. destruct H. destruct x.
+   auto. auto. 
+  }
+  {
+   intros. destruct H. exists true. auto. exists false. auto. 
+  }
+Qed.
 (** [] *)
 
 (** The introduction and elimination rules for [hor] are as follows.
@@ -1946,8 +2031,28 @@ Proof using. intros. case_if*. Qed.
 
 Lemma hor_comm : forall H1 H2,
   hor H1 H2 = hor H2 H1.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. unfold hor. 
+  apply pred_ext_1. intros h. split.
+  {
+   intros. destruct H. destruct x.
+   {
+    exists false. auto.
+   }
+   {
+    exists true. auto.
+   } 
+  }
+  {
+   intros. destruct H. destruct x.
+   {
+    exists false. auto.
+   }
+   {
+    exists true. auto.
+   } 
+  }
+Qed.
 (** [] *)
 
 Module HorExample.
@@ -1968,8 +2073,43 @@ Lemma MList_using_hor : forall L p,
          (\exists x q L', \[L = x::L']
                        \* (p ~~~>`{ head := x; tail := q})
                        \* (MList L' q)).
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. apply pred_ext_1. intros h. split.
+  {
+   intros. destruct L.
+   {
+    destruct H. subst. unfold hor. exists true. 
+    applys himpl_hempty_hpure. auto. auto.
+   }
+   {
+    unfold hor. exists false. exists v. 
+    rewrite MList_cons in H. destruct H.
+    exists x. exists L.
+    assert (h = Fmap.empty \u h). {
+      rewrite Fmap.union_empty_l. auto.
+    }
+    rewrite H0. apply hstar_intro.
+    applys himpl_hempty_hpure. auto. split.
+    auto. auto.
+   }
+  }
+  {
+   unfold hor. intros. destruct H. destruct x.
+   {
+    destruct H. rewrite H. assert (L = nil). { apply x. }
+    rewrite H0. assert (p = null). { apply x. } rewrite H1.
+    rewrite MList_nil. applys himpl_hempty_hpure. auto. split.
+   }
+   {
+    destruct H. destruct H. destruct H. destruct H. destruct H.
+    destruct H. destruct H0. destruct H0. destruct H0. destruct H0.
+    destruct H2. destruct H3. destruct H1. destruct H. subst.
+    rewrite MList_cons. exists x0. rewrite H. rewrite Fmap.union_empty_l.
+    apply hstar_intro.
+    auto. auto. auto.
+   } 
+  }
+Qed.
 (** [] *)
 
 End HorExample.
@@ -2003,8 +2143,19 @@ Definition hand (H1 H2 : hprop) : hprop :=
 
 Lemma hand_eq_hand' :
   hand = hand'.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  apply fun_ext_1. intros.
+  apply fun_ext_1. intros.
+  unfold hand. unfold hand'.
+  apply pred_ext_1. intros h. split.
+  {
+   intros. split. apply (H true). apply (H false).  
+  }
+  {
+   intros. applys hforall_intro. intros. destruct x.
+   apply H. apply H.
+  }
+Qed.
 (** [] *)
 
 (** The introduction and elimination rules for [hand] are as follows.
@@ -2038,8 +2189,18 @@ Proof using. introv M1 M2 Hh. intros b. case_if*. Qed.
 
 Lemma hand_comm : forall H1 H2,
   hand H1 H2 = hand H2 H1.
-Proof using. (* FILL IN HERE *) Admitted.
-
+Proof using. (* FILL IN HERE *) 
+  intros. 
+  applys hprop_op_comm. intros.
+  hnf. intros.
+  unfold hand. applys hforall_intro. intros.
+  unfold hand in H. 
+  assert (forall b : bool, ((if b then H0 else H3) h)). {
+    apply hforall_inv. auto.
+  }
+  destruct x.
+  apply (H4 false).  apply (H4 true).
+Qed.
 (** [] *)
 
 End ConjDisj.
